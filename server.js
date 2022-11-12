@@ -4,8 +4,8 @@ const util = require("util");
 const path = require("path");
 const app = express();
 const PORT = 5500;
-
-// read/write
+const readFile = util.promisify(fs.readfile);
+const writeFile = util.promisify(fs.writeFile);
 
 
 // server
