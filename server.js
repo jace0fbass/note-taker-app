@@ -1,12 +1,9 @@
-const express = import("express");
-const { notes } = import("./db/db.json");
-const fs = import("fs");
-const util = import("util");
-const path = import("path");
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3001;
-const readFiles = util.promisify(fs.readfile);
-const writeFiles = util.promisify(fs.writeFile);
+
 
 
 // server
@@ -19,37 +16,50 @@ app.use(express.static("./public"));
 
 // get
 app.get("/api/notes", (req, res) => {
-    fs.readFiles("./db/db.json", "utf8").then((data) => {
-        notes = [].concat(JSON.parse(data))
-        res.json(notes);
+    fs.readFile(path.join(__dirname, "db", "db.json"), "utf-8", function(err, data) {
+        res.json(JSON.parse(data));
     })
 });
 
 
 // post
 app.post("/api/notes", (req, res) => {
-    const note = req.body;
-    fs.readFiles("./db/db.json", "utf8").then((data) => {
-        const notes = [].concat(JSON.parse(data));
-        note.id = notes.length + 1
-        notes.push(note)
-        return notes
-    }).then((notes) => {
-        writeFiles("./db/db.json", JSON.stringify(notes))
-        res.json(note);
-    })
+    const {title, text} = req.body;
+    if (!title || !text){
+        res.status(400).json({error: "Required field empty."})
+        return
+    }
+    const nextNote = {
+        ...req.body,
+    id:Math.random()
+    };
+    fs.readFile(path.join(__dirname, "db", "db.json"), "utf-8", function(err, data) {
+        if (err) {
+            res.status(500).json(err)
+            return
+        }
+        const noteData = JSON.parse(data)
+        noteData.push(nextNote)
+        fs.writeFile(path.join(__dirname, "db", "db.json"), JSON.stringify(noteData), function(err) {
+            if (err) {
+                res.status(500).json(err);
+                return
+            }
+            res.status(200).json(nextNote);
+        });
+    });
 });
 
 
 // delete
 app.delete("/api/notes/:id", (req, res) => {
     const deleteId = parseInt(req.params.id);
-    fs.readFiles("./db/db.json", "utf8").then((data) =>{
+    fs.readFiles(path.join(__dirname, "db", "db.json"), "utf-8").then((data) =>{
         const notes = [].concat(JSON.parse(data));
-        const newNotes = []
+        const keepNotes = []
         for (let i = 0; i < notes.length; i++) {
             if(deleteId !== notes[i].id) {
-                newNotes.push(notes[i]);
+                keepNotes.push(notes[i]);
             }
         }
         return newNotes
